@@ -8,7 +8,7 @@ require('dotenv').config()
 const isAuthorized = async(req, res, next) => {
     try{
 
-        const token = req.cookies.token
+        const token = req.headers.authorization
         if(!token){
             return res.status(400).json({
                 success: false,
@@ -19,7 +19,8 @@ const isAuthorized = async(req, res, next) => {
         const decodedToken = jwt.verify(token, process.env.SECRETKEY);
         
         req.userData = {
-            email: decodedToken.email
+            id: decodedToken.id,
+            type: decodedToken.type
         }
 
         next()
@@ -32,4 +33,29 @@ const isAuthorized = async(req, res, next) => {
     }
 }
 
-module.exports = isAuthorized
+const isAdmin = async(req, res, next) => {
+    try{
+
+        const {type} = req.userData
+
+        if(type !== "Admin"){
+            return res.status(401).json({
+                success: false,
+                message: "protected route for Admin."
+            })
+        }
+
+        next()
+
+    } catch(error){
+        res.status(500).json({
+            success: false,
+            message: error.message
+        })
+    }
+}
+
+
+
+
+module.exports = {isAuthorized, isAdmin}

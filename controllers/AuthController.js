@@ -1,4 +1,5 @@
 const User = require('../models/UserModel');
+const Admin = require('../models/Admin')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 require('dotenv').config()
@@ -8,10 +9,13 @@ require('dotenv').config()
 const login = async(req, res)=>{
     try{
 
-        const {email, password} = req.body;
+        const {email, password, userType} = req.body;
 
         // if user does't exist
-        const user = await User.findOne({email})
+        let user = userType !== "Admin"? 
+        await User.findOne({email}) :
+        await Admin.findOne({email})
+
         if(!user){
             return res.status(400).json({
                 success: false,
@@ -30,19 +34,22 @@ const login = async(req, res)=>{
 
         // create a secure token(jwt) 
             const jwtToken = jwt.sign(
-            {name: user.name, email: user.email},
-            process.env.SECRETKEY,
-            { expiresIn: '1h'}
+            {id: user._id, type: user.userType},
+            process.env.SECRETKEY
         );
 
-        const updatedUser = await User.findOneAndUpdate(
+        const is = userType !== "Admin"? 
+        await User.findOneAndUpdate(
+            {email: email}, {$set:{token: jwtToken}}, {new: true}
+        ) :
+        await Admin.findOneAndUpdate(
             {email: email}, {$set:{token: jwtToken}}, {new: true}
         );
 
         res.status(200).json({
             success: true,
             message: "User login succcesfully",
-            updatedUser
+            token: jwtToken
         })
 
     } catch(error){
@@ -56,11 +63,14 @@ const login = async(req, res)=>{
 
 const register = async(req, res) => {
     try{
-
-        const {name, email, password, contact, postalcode} = req.body;
+        const {name, email, password, contact, postalcode, userType} = req.body;
 
         // if user already exist
-        const user = await User.findOne({email})
+        let user = userType !== "Admin"?
+        await User.findOne({email}) :
+        await Admin.findOne({email}) ;
+        
+
         if(user){
             return res.status(400).json({
                 success: false,
@@ -71,23 +81,37 @@ const register = async(req, res) => {
         // encrypt the password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // create a secure token(jwt) 
-        const jwtToken = jwt.sign(
-            {name: name, email: email},
-            process.env.SECRETKEY,
-            { expiresIn: '1h'}
-        );
-
         // finally add to DB
-        const userData = await User.create(
-            {name, email, password: hashedPassword, contact, postalcode, token: jwtToken, isDelete: false}
+        userData = userType !== "Admin"?
+        await User.create(
+            {name, email, password: hashedPassword, contact, postalcode, userType, token: null, isDelete: false}
+        ) : 
+        await Admin.create(
+            {name, email, password: hashedPassword, contact, postalcode, userType, token: null, isDelete: false}
         )
 
+        // create a secure token(jwt) 
+        const jwtToken = jwt.sign(
+            {id: userData._id, type: userType},
+            process.env.SECRETKEY
+        );
 
-        res.status(200).cookie('token',jwtToken, {httpOnly: true}).json({
+        // save the token
+        const is = userType !== "Admin" ?
+        await User.findByIdAndUpdate(
+            userData._id,
+            {$set:{token: jwtToken}}
+        ) :
+        await Admin.findByIdAndUpdate(
+            userData._id,
+            {$set:{token: jwtToken}}
+        );
+
+        
+        res.status(200).json({
             success: true,
             message: "User register succcesfully",
-            userData
+            token: jwtToken
         })
 
 

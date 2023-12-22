@@ -1,27 +1,29 @@
 const Category = require('../models/CategoryModel')
 const Product = require('../models/ProductModel')
 const SubCategory = require('../models/SubCategoryModel')
+const cloudinary = require('cloudinary').v2
+require('dotenv').config()
 
-
-const addProduct = async(req, res) =>{
-    try{
+const addProduct = async (req, res) => {
+    try {
 
         const {
             category_id,
-            subCategory_id, 
-            product_name, 
-            product_costprice, 
-            product_sellingprice, 
-            product_quantity
-        }= req.body
+            subCategory_id,
+            product_name,
+            product_costprice,
+            product_sellingprice,
+            product_quantity,
+            product_image
+        } = req.body
 
-        // take image...
 
         // category check
         const category = await Category.findOne(
-            {_id: category_id, isDelete: false}
+            { _id: category_id, isDelete: false }
         )
-        if(!category){
+
+        if (!category) {
             return res.status(500).json({
                 success: false,
                 message: "category does't exist"
@@ -36,12 +38,14 @@ const addProduct = async(req, res) =>{
                 }
             }
         ])
-        if(!subcategory){
+        if (!subcategory) {
             return res.status(500).json({
                 success: false,
                 message: "subcategory does't exist"
             })
         }
+
+
 
         await Product.create(
             {
@@ -50,7 +54,8 @@ const addProduct = async(req, res) =>{
                 product_name,
                 product_costprice,
                 product_sellingprice,
-                product_quantity
+                product_quantity,
+                product_image
             }
         );
 
@@ -58,8 +63,8 @@ const addProduct = async(req, res) =>{
             success: true,
             message: "Product created"
         })
- 
-    } catch(error){
+
+    } catch (error) {
         res.status(500).json({
             success: false,
             message: error.message
@@ -67,21 +72,21 @@ const addProduct = async(req, res) =>{
     }
 }
 
-const deleteProduct = async(req, res) =>{
-    try{
+const deleteProduct = async (req, res) => {
+    try {
 
-        const {product_id} = req.body
+        const { product_id } = req.body
 
         const product = await Product.findById(product_id)
         // if product does't exist
-        if(!product){
+        if (!product) {
             return res.status(500).json({
                 success: false,
                 message: "Product does't exist"
             })
         }
 
-        await Product.findByIdAndUpdate(product_id, 
+        await Product.findByIdAndUpdate(product_id,
             {
                 isDelete: true
             }
@@ -92,7 +97,7 @@ const deleteProduct = async(req, res) =>{
             message: "Product deleted"
         })
 
-    } catch(error){
+    } catch (error) {
         res.status(500).json({
             success: false,
             message: error.message
@@ -100,24 +105,25 @@ const deleteProduct = async(req, res) =>{
     }
 }
 
-const getCategoryProducts = async(req, res) => {
-    try{
+const getCategoryProducts = async (req, res) => {
+    try {
 
-        const {category_id, subCategory_id} = req.body
+        const { category_id, subCategory_id } = req.body
 
         const category = await Category.findOne(
-            {_id: category_id, isDelete: false}
+            { _id: category_id, isDelete: false }
         )
-        if(!category){
+        
+        if (!category) {
             return res.status(500).json({
                 success: false,
                 message: "category does't exist"
             })
         }
         const subcategory = await SubCategory.findOne(
-            {_id: subCategory_id, isDelete: false}
+            { _id: subCategory_id, isDelete: false }
         )
-        if(!subcategory){
+        if (!subcategory) {
             return res.status(500).json({
                 success: false,
                 message: "subcategory does't exist"
@@ -154,7 +160,29 @@ const getCategoryProducts = async(req, res) => {
             message: "category created",
             result
         })
- 
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        })
+    }
+}
+
+const addProductImage = async(req, res) => {
+    try{
+
+        const image = req.files.product_image
+
+        const folder = process.env.IMAGE_FOLDER
+        const imageData = await cloudinary.uploader.upload(image.tempFilePath, {folder});
+
+        res.status(200).json({
+            success: true,
+            message: "Product Image uploadded",
+            url: imageData.secure_url
+        })
+
     } catch(error){
         res.status(500).json({
             success: false,
@@ -164,4 +192,4 @@ const getCategoryProducts = async(req, res) => {
 }
 
 
-module.exports = {addProduct, deleteProduct, getCategoryProducts}
+module.exports = { addProduct, deleteProduct, getCategoryProducts , addProductImage}

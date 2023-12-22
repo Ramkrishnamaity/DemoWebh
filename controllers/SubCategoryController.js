@@ -1,6 +1,7 @@
 const Category = require('../models/CategoryModel')
 const SubCategory = require('../models/SubCategoryModel')
 const Product = require('../models/ProductModel')
+const { default: mongoose } = require('mongoose')
 
 const addSubCategory = async(req, res) => {
     try{
@@ -80,34 +81,35 @@ const getSubCategories = async(req, res) => {
 
         // ---- whay not work in  aggregation
 
-        let result = await SubCategory.find(
-            {category_id: category_id, isDelete: false}
-        )
+        // let result = await SubCategory.find(
+        //     {category_id: category_id, isDelete: false}
+        // )
         // find all categories with isDeleted value false  
-        // await SubCategory.aggregate([
-        //     {
-        //         $match: {
-        //             category_id: category_id,
-        //             isDelete: false
-        //         }
-        //     },
 
-        //     {
-        //         $project: {
-        //             _id: 0,
-        //             isDelete: 0
-        //         }
-        //     }
-        // ])
-        // .then((data)=>{
-        //     result = data
-        // })
+        await SubCategory.aggregate([
+            {
+                $match: {
+                    category_id: new mongoose.Types.ObjectId(category_id),
+                    isDelete: false
+                }
+            },
 
-        res.status(200).json({
-            success: true,
-            message: "category fetched",
-            result
+            {
+                $project: {
+                    _id: 0,
+                    isDelete: 0
+                }
+            }
+        ])
+        .then((data)=>{
+            res.status(200).json({
+                success: true,
+                message: "category fetched",
+                data:data
+            })
         })
+
+        
  
     } catch(error){
         res.status(500).json({

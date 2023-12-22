@@ -28,8 +28,7 @@ const productSchema = new mongoose.Schema({
     },
     product_image :[
         {
-            type: String,
-            required: true
+            type: String
         }
     ],
     isDelete: {

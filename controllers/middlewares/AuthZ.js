@@ -26,7 +26,7 @@ const isAuthorized = async(req, res, next) => {
         next()
 
     } catch(error){
-        res.status(404).json({
+        res.status(500).json({
             success: false,
             message: error.message
         })
@@ -56,6 +56,29 @@ const isAdmin = async(req, res, next) => {
 }
 
 
+const isUser = async(req, res, next) => {
+    try{
+
+        const {type} = req.userData
+
+        if(type !== "User"){
+            return res.status(401).json({
+                success: false,
+                message: "protected route for User."
+            })
+        }
+
+        next()
+
+    } catch(error){
+        res.status(500).json({
+            success: false,
+            message: error.message
+        })
+    }
+}
 
 
-module.exports = {isAuthorized, isAdmin}
+
+
+module.exports = {isAuthorized, isAdmin, isUser}

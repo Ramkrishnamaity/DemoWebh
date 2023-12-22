@@ -4,6 +4,8 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var mongoose = require('mongoose')
+const {cloudConnect} = require('./config/cloudinary')
+const fileUpload = require('express-fileupload')
 require('dotenv').config()
 
 var indexRouter = require('./routes/index');
@@ -11,13 +13,23 @@ var authRouter = require('./routes/Auth')
 var profileRouter = require('./routes/Profile');
 var productRouter = require('./routes/products/Product')
 var createProductRouter = require('./routes/products/CreateProduct')
+const cartRouter = require('./routes/products/cart')
 
 var app = express();
 app.use(express.json())
+app.use(fileUpload({
+  useTempFiles : true,
+  tempFileDir : '/tmp/'
+}));
 
+// Database connect
 mongoose.connect(process.env.MONGODB)
 .then(()=>{console.log("Database Connect.")})
 .catch(()=>{console.log("DB not Connected.")})
+
+// cloudinary connect
+cloudConnect();
+
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -31,6 +43,7 @@ app.use('/profile', profileRouter);
 app.use('/product', productRouter);
 app.use('/createproduct', createProductRouter)
 app.use('/auth', authRouter)
+app.use('/cart', cartRouter)
 
 
 

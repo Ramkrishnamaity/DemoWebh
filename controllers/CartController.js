@@ -1,53 +1,52 @@
 const Cart = require('../models/AddToCart')
 const Product = require('../models/ProductModel')
 
-const addToCart = async(req, res) =>{
-    try{
+const addToCart = async (req, res) => {
+    try {
 
-        const {product_id} = req.body
+        const { product_id } = req.body
         const user_id = req.userData.id
 
-        const product = await Product.findById(product_id)
-        const isExist = await Cart.findOne(
-            {product_id : product_id, user_id: user_id}
-        )
-        let cart = isExist? (
-            await Cart.findByIdAndUpdate(
-                    isExist._id,
-                    {
-                        $set: {quantity: isExist.quantity + 1,
-                            price: isExist.price + product.product_sellingprice
-                        },
-                    },
-                    { new: true }
-                )
-        ) : (
-            await Cart.create(
-                {
-                    product_id,
-                    user_id,
-                    price: product.product_sellingprice
+        await Product.findById(product_id)
+            .then(async (product) => {
+                if (!product) {
+                    return res.status(500).json({
+                        success: false,
+                        message: "Product id invalid"
+                    })
                 }
-            )
-        );
 
-        // // if any cart doc does't exist then create new cart doc
-        // const cart = await Cart.findOneAndUpdate(
-        //     {product_id : product_id, user_id: user_id},
-        //     {
-        //         $set: {quantity:    },
-        //         $setOnInsert: { quantity: 1}
-        //     },
-        //     { upsert: true }
-        // )
+                await Cart.findOne(
+                    { product_id: product_id, user_id: user_id }
+                ).then(async (cart) => {
+                    cart ? (
+                        await Cart.findByIdAndUpdate(
+                            cart._id,
+                            {
+                                $set: {
+                                    quantity: cart.quantity + 1,
+                                },
+                            },
+                            { new: true }
+                        )
+                    ) : (
+                        await Cart.create(
+                            {
+                                product_id,
+                                user_id,
+                            }
+                        )
+                    );
+                })
 
-        res.status(200).json({
-            success: true,
-            message: "Product added to the cart.",
-            cart
-        })
+                res.status(200).json({
+                    success: true,
+                    message: "Product added to the cart."
+                })
+            })
 
-    } catch(error){
+
+    } catch (error) {
         res.status(500).json({
             success: false,
             message: error.message
@@ -55,46 +54,44 @@ const addToCart = async(req, res) =>{
     }
 }
 
-
-const removeFromCart = async(req, res) =>{
-    try{
-        const {cart_id} = req.body
+const removeFromCart = async (req, res) => {
+    try {
+        const { cart_id } = req.body
         const user_id = req.userData.id
 
         // if any cart doc does't exist then create new cart doc
-        Cart.findOne({_id: cart_id, user_id: user_id})
-        .then(async(cart)=>{
+        await Cart.findOne({ _id: cart_id, user_id: user_id })
+            .then(async (cart) => {
 
-            if(!cart){
-                return res.status(401).json({
-                    success: false,
-                    message: "Cart does't exist."
-                })
-            }
-            let is = cart.quantity > 1? (
-                await Cart.findByIdAndUpdate(
-                    cart._id,
-                    {
-                        $set: {
-                            quantity: cart.quantity-1,
-                            price: cart.price - (cart.price/cart.quantity)
-                        }
-                    },
-                    {new: true}
+                if (!cart) {
+                    return res.status(401).json({
+                        success: false,
+                        message: "Cart does't exist."
+                    })
+                }
+                cart.quantity > 1 ? (
+                    await Cart.findByIdAndUpdate(
+                        cart._id,
+                        {
+                            $set: {
+                                quantity: cart.quantity - 1
+                            }
+                        },
+                        { new: true }
+                    )
+                ) : (
+                    await Cart.findByIdAndDelete(cart._id)
                 )
-            ) : (
-                await Cart.findByIdAndDelete(cart._id)
-            )
 
 
-            res.status(200).json({
-                success: true,
-                message: "Product removed from the cart."
+                res.status(200).json({
+                    success: true,
+                    message: "Product removed from the cart."
+                })
+
             })
 
-        })
-        
-    } catch(error){
+    } catch (error) {
         res.status(500).json({
             success: false,
             message: error.message
@@ -102,33 +99,47 @@ const removeFromCart = async(req, res) =>{
     }
 }
 
-const CheckOut = async(req, res) =>{
-    try{
+const CheckOut = async (req, res) => {
+    try {
         const user_id = req.userData.id
 
         // fetch all cart doc for that particular user
-        const carts = Cart.find(
-            {user_id: user_id}
-        )
-        if(carts == []){
-            return res.status(401).json({
-                success: false,
-                message: "Add some product to your cart first."
+        await Cart.find(
+            { user_id: user_id }
+        ).then(async (carts) => {
+
+            if (carts == []) {
+                return res.status(401).json({
+                    success: false,
+                    message: "Add some product to your cart first."
+                })
+            }
+
+            let totalAmunt = 0;
+            for (const cart of carts) {
+                await Product.findById(cart.product_id)
+                    .then((pro) => {
+                        totalAmunt += (pro.product_sellingprice * cart.quantity);
+                    })
+            }
+
+            //                                    ----why it was not working..??
+            // carts.forEach((cart) => {
+            //     await Product.findById(cart.product_id)
+            //         .then((pro) => {
+            //             totalAmunt += (pro.product_sellingprice * cart.quantity);
+            //         })
+            // })
+
+            res.status(200).json({
+                success: true,
+                message: "Pay the amount.",
+                totalAmunt
             })
-        }
 
-        let totalAmunt = 0;
-        (await carts).forEach((cart)=>{
-            totalAmunt += cart.price;
-        })
-        
-        res.status(200).json({
-            success: true,
-            message: "Pay the amount.",
-            totalAmunt
         })
 
-    } catch(error){
+    } catch (error) {
         res.status(500).json({
             success: false,
             message: error.message
@@ -136,4 +147,4 @@ const CheckOut = async(req, res) =>{
     }
 }
 
-module.exports = {addToCart, removeFromCart, CheckOut}
+module.exports = { addToCart, removeFromCart, CheckOut }

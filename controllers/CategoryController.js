@@ -6,14 +6,13 @@ const addCategory = async(req, res) => {
     try{
 
         const {category_name} = req.body
-        console.log(category_name)
 
         const category = await Category.create({category_name});
 
         res.status(200).json({
             success: true,
             message: "category created",
-            category_id: category._id
+            data: category
         })
  
     } catch(error){
@@ -29,39 +28,40 @@ const deleteCategory = async(req, res) => {
 
         const {category_id} = req.body
 
-        const isExist = await Category.findOne({_id: category_id})
-        if(!isExist){
-            return res.status(500).json({
-                success: false,
-                message: "category does't exist"
+        await Category.findOneAndUpdate(
+        {_id: category_id, isDelete: false}, {$set: {isDelete: true}})
+        .then(async (data)=>{
+            if(!data){
+                return res.status(500).json({
+                    success: false,
+                    message: "category does't exist"
+                })
+            }
+
+            // delete all subcategories and product belongs to this category 
+
+            await SubCategory.updateMany(
+                {category_id: category_id, isDelete: false},
+                {
+                    isDelete: true
+                }
+            )
+            
+            await Product.updateMany(
+                {category_id: category_id, isDelete: false},
+                {
+                    isDelete: true
+                }
+            )
+
+
+            res.status(200).json({
+                success: true,
+                message: "category deleted"
             })
-        }
 
-        await Category.findByIdAndUpdate({_id: category_id}, {$set: {isDelete: true}})
-
-
-        // delete all subcategories and product belongs to this category 
-
-        await SubCategory.updateMany(
-            {category_id: category_id},
-            {
-                isDelete: true
-            }
-        )
-        
-        await Product.updateMany(
-            {category_id: category_id},
-            {
-                isDelete: true
-            }
-        )
-
-
-        res.status(200).json({
-            success: true,
-            message: "category deleted"
         })
- 
+
     } catch(error){
         res.status(500).json({
             success: false,

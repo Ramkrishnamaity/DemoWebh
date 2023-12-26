@@ -1,19 +1,17 @@
 const { default: mongoose } = require('mongoose')
-const Admin = require('../models/Admin')
+const Admin = require('../models/AdminModel')
 const User = require('../models/UserModel')
 
 // controller function for profile data
 
 const getProfile = async (req, res) => {
     try {
-        //                                                    ------- fix the aggregation
         const { id , type} = req.userData
 
-        let data = []
         const pipeline = [
             {
                 $match: {
-                    _id: mongoose.Types.ObjectId(id),
+                    _id: new mongoose.Types.ObjectId(id),
                     isDelete: false
                 }
             },
@@ -30,19 +28,13 @@ const getProfile = async (req, res) => {
 
         let is = type !== "Admin" ? 
         await User.aggregate(pipeline)
-        .then((data1)=>{
-            data = data1
-        })
         : 
         await Admin.aggregate(pipeline)
-        .then((data1)=>{
-            data = data1
-        })
 
         res.status(200).json({
             success: true,
             message: "profile Fetched",
-            data
+            data: is
         })
 
     } catch (error) {
@@ -60,7 +52,7 @@ const updateProfile = async (req, res) => {
         const {id, type} = req.userData
         const { name, email, contact, postalcode } = req.body
 
-        const is = type !== "Admin"? 
+        type !== "Admin"? 
         await User.findByIdAndUpdate(
             id,
             {   

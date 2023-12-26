@@ -11,8 +11,7 @@ const productSchema = new mongoose.Schema({
     },
     product_name :{
         type: String,
-        required: true,
-        unique: true
+        required: true
     },
     product_costprice :{
         type: Number,

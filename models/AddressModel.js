@@ -28,10 +28,6 @@ const addressSchema = new mongoose.Schema({
     addressType : {
         type: String,
         enum: ["Home", "Office"]
-    },
-    isDelete :{
-        type: Boolean,
-        default: false
     }
 }, { timestamps: true } );
 

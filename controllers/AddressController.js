@@ -1,7 +1,17 @@
 const Address = require('../models/AddressModel')
+const { validationResult } = require('express-validator');
 
 const addAddress = async (req, res) => {
     try {
+
+        // server side validation
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({
+                success: false,
+                errors: errors.array()
+            })
+        }
 
         const user_id = req.userData.id
         const {

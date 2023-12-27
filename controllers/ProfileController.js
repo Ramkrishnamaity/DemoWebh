@@ -1,6 +1,7 @@
 const { default: mongoose } = require('mongoose')
 const Admin = require('../models/AdminModel')
 const User = require('../models/UserModel')
+const { validationResult } = require('express-validator');
 
 // controller function for profile data
 
@@ -49,6 +50,14 @@ const getProfile = async (req, res) => {
 const updateProfile = async (req, res) => {
     try {
 
+        // server side validation
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({
+                success: false,
+                errors: errors.array()
+            })
+        }
         const {id, type} = req.userData
         const { name, email, contact, postalcode } = req.body
 

@@ -4,7 +4,7 @@ const OTP = require('../models/otpModel')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 require('dotenv').config()
-
+const { validationResult } = require('express-validator');
 const { transporter } = require('../config/nodeMailer');
 const otpGenerator = require('otp-generator')
 
@@ -33,6 +33,15 @@ const sendMail = async (email, title, body, res) => {
 
 const login = async (req, res) => {
     try {
+
+        // server side validation
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({
+                success: false,
+                errors: errors.array()
+            })
+        }
 
         const { email, password, userType } = req.body;
 
@@ -88,6 +97,15 @@ const login = async (req, res) => {
 const getOtp = async (req, res) => {
     try {
 
+        // server side validation
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({
+                success: false,
+                errors: errors.array()
+            })
+        }
+
         const { email } = req.body
 
         // if user already exist
@@ -99,30 +117,29 @@ const getOtp = async (req, res) => {
                 success: false,
                 message: "User already exists"
             })
-        } else{
+        } else {
 
-        // otp create 
-        const otp = otpGenerator.generate(
-            6, {
-            upperCaseAlphabets: false,
-            lowerCaseAlphabets: false,
-            specialChars: false
-        }
-        );
+            // otp create 
+            const otp = otpGenerator.generate(
+                6, {
+                upperCaseAlphabets: false,
+                lowerCaseAlphabets: false,
+                specialChars: false
+            }
+            );
 
-        // otp save in db
-        OTP.create({ email, otp })
-            .then(async () => {
-                let info = await sendMail(email, "Verification Email", otp, res)
+            // otp save in db
+            OTP.create({ email, otp })
+                .then(async () => {
+                    let info = await sendMail(email, "Verification Email", otp, res)
 
-                res.status(200).json({
-                    success: true,
-                    message: "You receive an otp in your email.",
-                    info
+                    res.status(200).json({
+                        success: true,
+                        message: "You receive an otp in your email.",
+                        info
+                    })
                 })
-            })
-    }
-
+        }
 
     } catch (error) {
         res.status(500).json({
@@ -135,26 +152,38 @@ const getOtp = async (req, res) => {
 
 const register = async (req, res) => {
     try {
+
+        // server side validation
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({
+                success: false,
+                errors: errors.array()
+            })
+        }
+
         const { name, email, password, contact, postalcode, userType, otp } = req.body;
+
 
         // match otp and delete
         await OTP.findOne({ email }).sort({ createdAt: -1 }).limit(1)
-            .then(async(data) => {
-                if (data == []) {
+            .then(async (data) => {
+                if (!data) {
                     return res.status(401).json({
                         success: false,
-                        message: "OTP expires"
+                        message: "OTP expires or does't exist"
                     })
+                } else{
+                    if (otp !== data.otp) {
+                        return res.status(401).json({
+                            success: false,
+                            message: "Wrong OTP"
+                        })
+                    }
+                    await OTP.deleteMany(
+                        { email: email }
+                    )
                 }
-                if (otp !== data.otp) {
-                    return res.status(401).json({
-                        success: false,
-                        message: "Wrong OTP"
-                    })
-                }
-                await OTP.deleteMany(
-                    {email: email}
-                )
             })
 
         // encrypt the password

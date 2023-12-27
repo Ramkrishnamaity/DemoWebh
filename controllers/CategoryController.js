@@ -2,8 +2,18 @@ const Category = require('../models/CategoryModel');
 const Product = require('../models/ProductModel');
 const SubCategory = require('../models/SubCategoryModel');
 
+const { validationResult } = require('express-validator');
+
 const addCategory = async(req, res) => {
     try{
+        // server side validation
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({
+                success: false,
+                errors: errors.array()
+            })
+        }
 
         const {category_name} = req.body
 

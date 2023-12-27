@@ -4,9 +4,18 @@ const Product = require('../models/ProductModel')
 const SubCategory = require('../models/SubCategoryModel')
 const cloudinary = require('cloudinary').v2
 require('dotenv').config()
+const { validationResult } = require('express-validator');
 
 const addProduct = async (req, res) => {
     try {
+        // server side validation
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({
+                success: false,
+                errors: errors.array()
+            })
+        }
 
         const {
             category_id,
